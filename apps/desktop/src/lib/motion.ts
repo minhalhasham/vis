@@ -65,3 +65,15 @@ export function slerpQuaternion(
   ];
 }
 
+export function quaternionAngularDistance(
+  a: QuaternionTuple,
+  b: QuaternionTuple,
+): number {
+  const dot = Math.abs(a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]);
+  return 2 * Math.acos(Math.min(1, dot));
+}
+
+export function smoothingAmount(deltaMs: number, timeConstantMs = 40): number {
+  if (deltaMs <= 0) return 0;
+  return 1 - Math.exp(-Math.min(deltaMs, 100) / timeConstantMs);
+}

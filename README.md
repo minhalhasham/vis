@@ -55,6 +55,10 @@ The iPhone app requests camera access to scan the pairing QR code and local
 network access to reach the PC. Molecule data and motion samples remain local;
 there are no accounts, telemetry, or cloud calls in this prototype.
 
+Pause Motion freezes phone-driven rotation. Resuming keeps the molecule at its
+current orientation and treats the phone's new position as the neutral pose;
+Recenter performs the same calibration while motion is already running.
+
 ## Supported prototype scope
 
 - One connected, ordinary small organic molecule at a time

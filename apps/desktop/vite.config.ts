@@ -11,6 +11,14 @@ export default defineConfig({
       "@molecvis/protocol": path.resolve(__dirname, "../../packages/protocol/src/index.ts"),
     },
   },
+  optimizeDeps: {
+    // Ketcher resolves its Indigo worker relative to import.meta.url. Vite's
+    // dependency optimizer rewrites that URL into .vite/deps without copying
+    // the adjacent worker and WASM assets, which leaves the editor blank in
+    // development. Let Vite serve these ESM packages from their real location.
+    exclude: ["ketcher-standalone"],
+    include: ["ketcher-core", "@babel/runtime/regenerator"],
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true,

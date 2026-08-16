@@ -11,13 +11,17 @@ final class MotionController: ObservableObject {
     private var sequence = 0
 
     func start() {
+        guard !isRunning else { return }
         guard manager.isDeviceMotionAvailable else {
             unavailableReason = "Device Motion is unavailable on this device. Use a physical iPhone."
             return
         }
         unavailableReason = nil
-        sequence = 0
-        manager.deviceMotionUpdateInterval = 1.0 / 60.0
+        // Freeze the current molecule orientation and use the phone's present
+        // attitude as the baseline for this run. ControllerConnection preserves
+        // this event's ordering ahead of the first resumed pose.
+        connection?.sendRecenter()
+        manager.deviceMotionUpdateInterval = 1.0 / 30.0
         manager.startDeviceMotionUpdates(using: .xArbitraryZVertical, to: .main) { [weak self] sample, error in
             guard let self else { return }
             if let error {
@@ -57,4 +61,3 @@ final class MotionController: ObservableObject {
         connection?.sendRecenter()
     }
 }
-

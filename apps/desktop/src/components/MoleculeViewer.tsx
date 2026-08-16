@@ -10,7 +10,9 @@ import type { ControllerEvent, PoseMessage, QuaternionTuple } from "@molecvis/pr
 import {
   mapDeviceQuaternionToViewer,
   multiplyQuaternion,
+  quaternionAngularDistance,
   relativeQuaternion,
+  smoothingAmount,
   slerpQuaternion,
 } from "../lib/motion";
 
@@ -29,6 +31,8 @@ interface MoleculeViewerProps {
 }
 
 const identity: QuaternionTuple = [0, 0, 0, 1];
+const motionSmoothingTimeMs = 40;
+const settledAngleRadians = 0.001;
 
 export const MoleculeViewer = forwardRef<MoleculeViewerHandle, MoleculeViewerProps>(
   function MoleculeViewer({ style, showHydrogens }, ref) {
@@ -42,6 +46,7 @@ export const MoleculeViewer = forwardRef<MoleculeViewerHandle, MoleculeViewerPro
     const phoneDriving = useRef(false);
     const lastSequence = useRef(-1);
     const animationFrame = useRef<number>();
+    const lastFrameTime = useRef<number | null>(null);
     const [hasMolecule, setHasMolecule] = useState(false);
 
     const applyStyle = () => {
@@ -74,9 +79,24 @@ export const MoleculeViewer = forwardRef<MoleculeViewerHandle, MoleculeViewerPro
       const observer = new ResizeObserver(() => viewer.resize());
       observer.observe(hostRef.current);
 
-      const animate = () => {
-        if (phoneDriving.current) {
-          const next = slerpQuaternion(currentQuaternion.current, targetQuaternion.current, 0.28);
+      const animate = (timestamp: number) => {
+        const previousTimestamp = lastFrameTime.current ?? timestamp;
+        const deltaMs = timestamp - previousTimestamp;
+        lastFrameTime.current = timestamp;
+
+        if (
+          phoneDriving.current &&
+          quaternionAngularDistance(currentQuaternion.current, targetQuaternion.current) > settledAngleRadians
+        ) {
+          const amount = smoothingAmount(deltaMs, motionSmoothingTimeMs);
+          const interpolated = slerpQuaternion(
+            currentQuaternion.current,
+            targetQuaternion.current,
+            amount,
+          );
+          const next = quaternionAngularDistance(interpolated, targetQuaternion.current) <= settledAngleRadians
+            ? targetQuaternion.current
+            : interpolated;
           currentQuaternion.current = next;
           const view = viewer.getView();
           view[4] = next[0];
@@ -84,7 +104,6 @@ export const MoleculeViewer = forwardRef<MoleculeViewerHandle, MoleculeViewerPro
           view[6] = next[2];
           view[7] = next[3];
           viewer.setView(view);
-          viewer.render();
         }
         animationFrame.current = requestAnimationFrame(animate);
       };
@@ -144,7 +163,6 @@ export const MoleculeViewer = forwardRef<MoleculeViewerHandle, MoleculeViewerPro
         targetQuaternion.current = currentQuaternion.current;
         baselinePhone.current = null;
         phoneDriving.current = false;
-        viewer.render();
       },
       applyControllerEvent(event) {
         const viewer = viewerRef.current;
@@ -160,10 +178,8 @@ export const MoleculeViewer = forwardRef<MoleculeViewerHandle, MoleculeViewerPro
           view[0] += event.dx * 0.018;
           view[1] -= event.dy * 0.018;
           viewer.setView(view);
-          viewer.render();
         } else if (event.type === "zoom") {
           viewer.zoom(event.scale);
-          viewer.render();
         }
       },
       setControllerConnected(connected) {
