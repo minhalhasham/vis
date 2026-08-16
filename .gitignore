@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-electron/
+coverage/
+.vite/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+*.log
+.DS_Store
+DerivedData/
+xcuserdata/
+*.xcuserstate
+
